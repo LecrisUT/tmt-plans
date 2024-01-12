@@ -28,14 +28,11 @@ rlJournalStart
 				rlRun "latest_build=\$(cat $rlRun_LOG | sed 's/\s.*//')" 0 "Resolve latest_build variable"
 				if [[ -n "$latest_build" ]]; then
 					## If the package is already uploaded downstream
-					# Default and required options
-					args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/${ID}.yaml}"
-					# Fetch and write to ./inspect_builds
-					args="$args -f  -w ./inspect_builds"
-					# Specify the architectures
+					rlRun "args=\"-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/${ID}.yaml}\"" 0 "Set args: Default and required options"
+					rlRun "args=\"\$args -f  -w ./inspect_builds\"" 0 "Set args: Fetch and write to ./inspect_builds"
 					# TODO: Should have a better way to get the current arch to cover emulated and other cases
-					args="$args --arches=src,noarch,$(arch)"
-     					args="$args $latest_build"
+					rlRun "args=\"\$args --arches=src,noarch,$(arch)\"" 0 "Set args: Specify the architectures"
+					rlRun "args=\"\$args \$latest_build && echo \$args" 0 "Set args: latest_build"
 					rlRun "/usr/bin/rpminspect $args" 0 "Downloading latest koji builds"
 				fi
 			else
@@ -52,28 +49,23 @@ rlJournalStart
 		rlRun "tree ./inspect_builds"
 
 		## Do actual rpminspect
-		# Default and required options
-		args="-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/${ID}.yaml}"
-		# Output the data to json so that it can be displayed
-		args="$args --output=$TMT_TEST_DATA/result.json --format=json"
+		rlRun "args=\"-v -c ${RPMINSPECT_CONFIG:-/usr/share/rpminspect/${ID}.yaml}\"" 0 "Set args: Default and required options"
+		rlRun "args=\"\$args --output=$TMT_TEST_DATA/result.json --format=json\"" 0 "Set args: Output the data to json"
 		# Specify the test to run
 		if [[ -n "$RPMINSPECT_TESTS" ]]; then
-			# Run only specified tests. Takes precedence over --exclude
-			args="$args --tests=$RPMINSPECT_TESTS"
+			# Takes precedence over --exclude
+			rlRun "args=\"\$args --tests=$RPMINSPECT_TESTS\"" 0 "Set args: Run only specified tests"
 		elif [[ -n "$RPMINSPECT_EXCLUDE" ]]; then
-			# Exclude test lists given. Only run if there is no RPMINSPECT_TESTS
-		 	args="$args --exclude=${RPMINSPECT_EXCLUDE:-metadata}"
+			# Only run if there is no RPMINSPECT_TESTS
+			rlRun "args=\"\$args --exclude=${RPMINSPECT_EXCLUDE}\"" 0 "Set args: Exclude test lists given"
 		else
 			# TODO: Only exclude metadata if running with copr
 			# https://tmt.readthedocs.io/en/stable/spec/context.html#initiator
-			args="$args --exclude=metadata"
+			rlRun "args=\"\$args --exclude=metadata\"" 0 "Set args: Exclude metadata on copr"
 		fi
-		# Run rpminspect for the specified architectures
-		[[ -n "$RPMINPSECT_ARCHES" ]] && args="$args --arches=$RPMINPSECT_ARCHES"
-		# If we have a previous build to compare with, use that as before_build
-		[[ -n "$latest_build" ]] && args="$args ./inspect_builds/$latest_build"
-		# The remaining part is treated as the after_build/the build to be inspected
-		args="$args ./inspect_builds/$PACKIT_PACKAGE_NVR"
+		[[ -n "$RPMINPSECT_ARCHES" ]] && rlRun "args=\"\$args --arches=$RPMINPSECT_ARCHES\"" 0 "Set args: Run rpminspect for the specified architectures"
+		[[ -n "$latest_build" ]] && rlRun "args=\"\$args ./inspect_builds/$latest_build\"" 0 "Set args: Use latest_build as before_build"
+		rlRun "args=\"\$args ./inspect_builds/$PACKIT_PACKAGE_NVR\" && echo \$args" 0 "Set args: Set downloaded source as after_build"
 	  rlRun "/usr/bin/rpminspect $args" 0 "Run rpminspect"
 		rlRun "cp $TMT_PLAN_DATA/viewer.html $TMT_TEST_DATA/viewer.html"
 	rlPhaseEnd
