@@ -14,6 +14,7 @@ rlJournalStart
 	rlPhaseEnd
 
 	rlPhaseStartTest
+		rlRun "env" 0 "Print environment variables"
 		# Get OS info of the current distro. Maybe there is a more modern approach?
 		source /etc/os-release
 		# Get the most recent koji build

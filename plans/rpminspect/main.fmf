@@ -21,6 +21,10 @@ prepare:
       curl --silent --show-error --fail --retry 5
       --output "$TMT_PLAN_DATA/viewer.html"
       https://raw.githubusercontent.com/rpminspect/rpminspect/main/contrib/viewer.html
+environment:
+  MYDEBUG_DISTRO: $@{distro}
+  MYDEBUG_INITIATOR: $@{initiator}
+  MYDEBUG_TRIGGER: $@trigger
 
 adjust:
   - prepare+:
