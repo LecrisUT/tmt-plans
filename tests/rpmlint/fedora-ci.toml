@@ -1,0 +1,3 @@
+[Scoring]
+# Lower spelling errors to warning
+spelling-error = 0
