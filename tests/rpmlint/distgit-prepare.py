@@ -9,6 +9,7 @@
 import argparse
 import logging
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,22 @@ logger = logging.getLogger(Path(__file__).name)
 
 CI_CONFIG_SECTION = "rpmlint"
 
+RPMLINT_TOML_FILES = [
+    "./fedora-ci.toml",
+]
+
+
+def export_rpmlint_tomls(custom_file: Path, workdir: Path, env_file: Path) -> None:
+    rpmlint_data_dir = workdir / "rpmlint"
+    rpmlint_data_dir.mkdir(exist_ok=True)
+    for toml_file in RPMLINT_TOML_FILES:
+        shutil.copy(toml_file, rpmlint_data_dir)
+    if custom_file.exists():
+        logger.info("Found custom rpmlint.toml file")
+        shutil.copy(custom_file, rpmlint_data_dir)
+    with env_file.open("a") as f:
+        f.write(f"RPMLINT_TOML_FILE={rpmlint_data_dir}\n")
+
 
 def set_config_files(config: dict[str, Any], args: argparse.Namespace) -> None:
     if rc_content := config.get("rc"):
@@ -30,13 +47,12 @@ def set_config_files(config: dict[str, Any], args: argparse.Namespace) -> None:
         rc_file.write_text(rc_content)
         with args.env_file.open("a") as f:
             f.write(f"RPMLINT_RC_FILE={rc_file}\n")
+    distgit_toml_file: Path = args.workdir / "rpmlint.toml"
     if toml_content := config.get("toml"):
         toml_content: dict[str, Any]
-        toml_file: Path = args.workdir / "rpmlint.toml"
-        with toml_file.open("wb") as f:
+        with distgit_toml_file.open("wb") as f:
             tomli_w.dump(toml_content, f)
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
+    export_rpmlint_tomls(distgit_toml_file, args.workdir, args.env_file)
 
 
 def get_config_fallback(dist_git_path: Path, args: argparse.Namespace) -> None:
@@ -48,10 +64,7 @@ def get_config_fallback(dist_git_path: Path, args: argparse.Namespace) -> None:
         with args.env_file.open("a") as f:
             f.write(f"RPMLINT_RC_FILE={rc_files[0]}\n")
     toml_file = dist_git_path / "rpmlint.toml"
-    if toml_file.exists():
-        logger.info("Found rpmlint.toml file")
-        with args.env_file.open("a") as f:
-            f.write(f"RPMLINT_TOML_FILE={toml_file}\n")
+    export_rpmlint_tomls(toml_file, args.workdir, args.env_file)
 
 
 def main(args: argparse.Namespace) -> None:
