@@ -21,25 +21,15 @@ def main(args: argparse.Namespace) -> None:
     if len(spec_files) > 1:
         logger.warning("More than 1 spec file found")
     if spec_files:
-        with args.env_file.open("a") as f:
-            f.write(f"SPEC_FILE={spec_files[0]}\n")
+        utils.save_env("SPEC_FILE", spec_files[0])
     else:
         logger.error("No spec file found?")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--koji-task-id", default=os.environ.get("KOJI_TASK_ID"))
-    parser.add_argument(
-        "--workdir",
-        type=Path,
-        default=os.environ.get("TMT_PLAN_DATA", "."),
-    )
-    parser.add_argument(
-        "--env-file",
-        type=Path,
-        default=os.environ.get("TMT_PLAN_ENVIRONMENT_FILE", ".env"),
-    )
 
     args = parser.parse_args()
     try:
