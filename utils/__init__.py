@@ -1,8 +1,11 @@
+import functools
 import logging
 import re
 import sys
 import subprocess
 import tomllib
+import tempfile
+import os
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +16,36 @@ CI_CONFIG_FILES = [
     "fedora-ci.yml",
     "fedora-ci.toml",
 ]
+
+
+@functools.cache
+def get_env_file() -> Path | None:
+    env_file = os.environ.get("TMT_PLAN_ENVIRONMENT_FILE")
+    return Path(env_file) if env_file else None
+
+
+def save_env(name: str, value: Any) -> None:
+    if not (env_file := get_env_file()):
+        return
+    with env_file.open("a") as f:
+        f.write(f"{name}={value!s}\n")
+
+
+@functools.cache
+def get_workdir() -> Path:
+    """
+    Get or generate a temporary workdir used across tests.
+
+    We do not expect any reboot in these tests, so we can use a ``/tmp`` path.
+    Avoid using paths like ``TMT_PLAN_DATA`` because we do not want these to be
+    synced back to testing-farm artifact storage.
+    """
+    workdir = os.environ.get("WORKDIR")
+    if not workdir:
+        workdir = tempfile.mkdtemp(prefix="tmt-test-workdir")
+        save_env("WORKDIR", workdir)
+    logger.info(f"Temporary workdir: {workdir}")
+    return Path(workdir)
 
 
 def get_config(dist_git_path: Path, section: str) -> dict[str, Any] | None:
