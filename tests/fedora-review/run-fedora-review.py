@@ -10,6 +10,8 @@ from enum import Enum
 import json
 import yaml
 
+import utils
+
 # Expose these to the users
 FEDORA_REVIEW_RESULTS = [
     "fedora-review.log.gz",
@@ -157,12 +159,13 @@ def main(args: argparse.Namespace) -> None:
 
     # At this point, the RPM packages are already downloaded in `args.workdir`,
     # we just need to copy the .spec next to them
-    shutil.copy(args.spec_file, args.workdir)
+    workdir = utils.get_workdir()
+    shutil.copy(args.spec_file, workdir)
 
-    review = fedora_review(args.spec_file, args.workdir)
+    review = fedora_review(args.spec_file, workdir)
     issues = count_issues(review)
     dump_results_yaml(issues)
-    copy_fedora_review_results(args.spec_file, args.workdir)
+    copy_fedora_review_results(args.spec_file, workdir)
     copy_viewer_html()
     copy_data_into_data()
 
@@ -177,11 +180,6 @@ if __name__ == "__main__":
             "Simple wrapper for fedora-review. "
             "Can also pass variables via environment variables."
         )
-    )
-    parser.add_argument(
-        "--workdir",
-        type=Path,
-        default=os.environ.get("TMT_PLAN_DATA", "."),
     )
     parser.add_argument(
         "--spec-file",
